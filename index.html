@@ -235,6 +235,14 @@ figure.dia figcaption{font-family:var(--sans);font-size:12.5px;color:var(--muted
 .puerta-form input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .puerta-form button{font-family:var(--sans);font-weight:600;font-size:15px;padding:12px 18px;border-radius:10px;border:1px solid var(--ink);background:var(--ink);color:var(--paper)}
 .puerta-form button:disabled{opacity:.6}
+.puerta-form .campo-clave{position:relative;display:block}
+.puerta-form .campo-clave[hidden]{display:none}
+.puerta-form .campo-clave input{padding-right:48px}
+.puerta-form .ojo{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:34px;height:34px;display:grid;place-items:center;border:0;background:none;padding:0;border-radius:8px;color:var(--muted);cursor:pointer}
+.puerta-form .ojo:hover{color:var(--ink);background:var(--surface-2)}
+.puerta-form .ojo:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.puerta-form .ojo svg{width:19px;height:19px;display:block}
+.puerta-form .ojo svg[hidden]{display:none}
 .puerta-cambiar{margin-top:14px;font-family:var(--sans);font-size:13.5px;color:var(--ink-2)}
 .puerta-cambiar button{font-family:var(--sans);font-size:13.5px;font-weight:600;border:0;background:none;color:var(--accent-ink);text-decoration:underline;padding:0;cursor:pointer}
 .puerta-olvide{margin-top:7px;font-family:var(--sans);font-size:12.5px}
@@ -256,7 +264,14 @@ figure.dia figcaption{font-family:var(--sans);font-size:12.5px;color:var(--muted
     <div class="puerta-form">
       <input id="puerta-nombre" type="text" autocomplete="name" placeholder="Tu nombre y apellido" aria-label="Tu nombre" hidden>
       <input id="puerta-mail" type="email" inputmode="email" autocomplete="email" placeholder="tu@correo.com" aria-label="Tu correo">
-      <input id="puerta-clave" type="password" autocomplete="current-password" placeholder="Tu contraseña" aria-label="Tu contraseña">
+      <label class="campo-clave" id="campo-clave">
+        <input id="puerta-clave" type="password" autocomplete="current-password" placeholder="Tu contraseña" aria-label="Tu contraseña">
+        <button type="button" class="ojo" data-ojo="puerta-clave" aria-label="Mostrar la contraseña"><svg class="ojo-ver" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.8 12s3.8-7 10.2-7 10.2 7 10.2 7-3.8 7-10.2 7S1.8 12 1.8 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="ojo-no" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 5.1A9.9 9.9 0 0 1 12 5c6.4 0 10.2 7 10.2 7a18.4 18.4 0 0 1-3 3.9"/><path d="M6.3 6.3A18.3 18.3 0 0 0 1.8 12s3.8 7 10.2 7a9.8 9.8 0 0 0 4-.8"/><path d="M10 10a2.8 2.8 0 0 0 4 4"/><path d="M2.5 2.5l19 19"/></svg></button>
+      </label>
+      <label class="campo-clave" id="campo-clave2" hidden>
+        <input id="puerta-clave2" type="password" autocomplete="new-password" placeholder="Repetí la contraseña" aria-label="Repetí la contraseña">
+        <button type="button" class="ojo" data-ojo="puerta-clave2" aria-label="Mostrar la contraseña"><svg class="ojo-ver" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.8 12s3.8-7 10.2-7 10.2 7 10.2 7-3.8 7-10.2 7S1.8 12 1.8 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="ojo-no" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 5.1A9.9 9.9 0 0 1 12 5c6.4 0 10.2 7 10.2 7a18.4 18.4 0 0 1-3 3.9"/><path d="M6.3 6.3A18.3 18.3 0 0 0 1.8 12s3.8 7 10.2 7a9.8 9.8 0 0 0 4-.8"/><path d="M10 10a2.8 2.8 0 0 0 4 4"/><path d="M2.5 2.5l19 19"/></svg></button>
+      </label>
       <button id="puerta-btn" type="button">Entrar</button>
     </div>
     <div class="puerta-msg" id="puerta-msg" hidden></div>
@@ -1748,6 +1763,9 @@ function puertaModo(m){
     ? 'Elegí una contraseña de 6 caracteres o más. No hay que confirmar nada por correo: entrás en el momento.'
     : 'Tu avance queda guardado en tu cuenta, así que lo retomás desde el celular o la computadora, donde sea.';
   $p('puerta-nombre').hidden = !crear;
+  $p('campo-clave2').hidden = !crear;
+  $p('puerta-clave2').value = '';
+  ocultarClaves();
   $p('puerta-clave').setAttribute('autocomplete', crear ? 'new-password' : 'current-password');
   $p('puerta-btn').textContent = crear ? 'Crear mi cuenta' : 'Entrar';
   $p('puerta-pregunta').innerHTML = crear
@@ -1756,6 +1774,19 @@ function puertaModo(m){
   $p('puerta-olvido').hidden = crear;
   puertaMsg('');
   (crear ? $p('puerta-nombre') : $p('puerta-mail')).focus();
+}
+
+function verClave(btn, mostrar){
+  const campo = $p(btn.dataset.ojo);
+  if(!campo) return;
+  campo.type = mostrar ? 'text' : 'password';
+  btn.setAttribute('aria-label', mostrar ? 'Ocultar la contraseña' : 'Mostrar la contraseña');
+  btn.querySelector('.ojo-ver').hidden = mostrar;
+  btn.querySelector('.ojo-no').hidden  = !mostrar;
+}
+
+function ocultarClaves(){
+  document.querySelectorAll('#puerta .ojo').forEach(b => verClave(b, false));
 }
 
 function puertaError(e){
@@ -1777,6 +1808,10 @@ async function puertaEnviar(){
   if(!MAIL_OK.test(mail)){ puertaMsg('Escribí un correo válido.','mal'); $p('puerta-mail').focus(); return; }
   if(clave.length < 6){ puertaMsg('La contraseña tiene que tener 6 caracteres o más.','mal'); $p('puerta-clave').focus(); return; }
   if(MODO === 'crear' && !nombre){ puertaMsg('Poné tu nombre, así aparecés en el seguimiento del curso.','mal'); $p('puerta-nombre').focus(); return; }
+  if(MODO === 'crear' && clave !== ($p('puerta-clave2').value || '')){
+    puertaMsg('Las dos contraseñas no coinciden. Fijate con el ojito que estén iguales.','mal');
+    $p('puerta-clave2').focus(); $p('puerta-clave2').select(); return;
+  }
 
   const btn = $p('puerta-btn'), rotulo = btn.textContent;
   btn.disabled = true; btn.textContent = 'Un segundo…';
@@ -1867,11 +1902,13 @@ async function pedirNombre(){
     if(e.target.closest('#puerta-btn')) puertaEnviar();
     if(e.target.closest('#puerta-modo')) puertaModo(MODO === 'crear' ? 'entrar' : 'crear');
     if(e.target.closest('#puerta-reset')) pedirReset();
+    const ojo = e.target.closest('#puerta .ojo');
+    if(ojo) verClave(ojo, $p(ojo.dataset.ojo).type === 'password');
     if(e.target.closest('#salir')) salir();
     if(e.target.closest('#cambiar-nombre')) pedirNombre();
   });
   document.addEventListener('keydown', e=>{
-    if(e.key==='Enter' && /^puerta-(mail|clave|nombre)$/.test(e.target.id)) puertaEnviar();
+    if(e.key==='Enter' && /^puerta-(mail|clave|clave2|nombre)$/.test(e.target.id)) puertaEnviar();
   });
 })();
 
