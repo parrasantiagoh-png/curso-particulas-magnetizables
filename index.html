@@ -235,6 +235,10 @@ figure.dia figcaption{font-family:var(--sans);font-size:12.5px;color:var(--muted
 .puerta-form input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .puerta-form button{font-family:var(--sans);font-weight:600;font-size:15px;padding:12px 18px;border-radius:10px;border:1px solid var(--ink);background:var(--ink);color:var(--paper)}
 .puerta-form button:disabled{opacity:.6}
+.puerta-cambiar{margin-top:14px;font-family:var(--sans);font-size:13.5px;color:var(--ink-2)}
+.puerta-cambiar button{font-family:var(--sans);font-size:13.5px;font-weight:600;border:0;background:none;color:var(--accent-ink);text-decoration:underline;padding:0;cursor:pointer}
+.puerta-olvide{margin-top:7px;font-family:var(--sans);font-size:12.5px}
+.puerta-olvide button{font-family:var(--sans);font-size:12.5px;border:0;background:none;color:var(--muted);text-decoration:underline;padding:0;cursor:pointer}
 .puerta-msg{margin-top:14px;font-family:var(--sans);font-size:13.5px;line-height:1.5;padding:11px 13px;border-radius:9px;background:var(--surface-2);color:var(--ink-2)}
 .puerta-msg.bien{background:var(--accent-soft);color:var(--accent-ink)}
 .puerta-msg.mal{background:var(--bad-soft);color:var(--bad)}
@@ -247,13 +251,17 @@ figure.dia figcaption{font-family:var(--sans);font-size:12.5px;color:var(--muted
 <div id="puerta" hidden>
   <div class="puerta-caja">
     <div class="puerta-marca"><span class="dot"></span><span>Partículas Magnetizables<small>IRAM · ISO 9712 · Nivel 1 y 2</small></span></div>
-    <h1>Entrá con tu correo</h1>
-    <p class="lede">Sin contraseña. Ponés tu correo, te llega un enlace y entrás con un clic. Tu avance queda guardado en tu cuenta, así que lo retomás desde el celular o la computadora, donde sea.</p>
+    <h1 id="puerta-titulo">Entrá a tu cuenta</h1>
+    <p class="lede" id="puerta-lede">Tu avance queda guardado en tu cuenta, así que lo retomás desde el celular o la computadora, donde sea.</p>
     <div class="puerta-form">
+      <input id="puerta-nombre" type="text" autocomplete="name" placeholder="Tu nombre y apellido" aria-label="Tu nombre" hidden>
       <input id="puerta-mail" type="email" inputmode="email" autocomplete="email" placeholder="tu@correo.com" aria-label="Tu correo">
-      <button id="puerta-btn" type="button">Enviarme el enlace</button>
+      <input id="puerta-clave" type="password" autocomplete="current-password" placeholder="Tu contraseña" aria-label="Tu contraseña">
+      <button id="puerta-btn" type="button">Entrar</button>
     </div>
     <div class="puerta-msg" id="puerta-msg" hidden></div>
+    <p class="puerta-cambiar" id="puerta-pregunta">¿Primera vez? <button id="puerta-modo" type="button">Creá tu cuenta</button></p>
+    <p class="puerta-olvide" id="puerta-olvido">¿Te olvidaste la contraseña? <button id="puerta-reset" type="button">Te mandamos una nueva</button></p>
     <p class="puerta-pie">Tu nombre y tu avance en el curso quedan visibles para quien lleva el seguimiento de la capacitación. Lo que estudiás, cuánto y cuándo: nada más que eso.</p>
   </div>
 </div>
@@ -1727,24 +1735,85 @@ function puertaMsg(html, tipo){
   m.hidden = !html;
 }
 
-async function pedirEnlace(){
-  const campo = document.getElementById('puerta-mail');
-  const correo = (campo.value||'').trim();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)){
-    puertaMsg('Escribí un correo válido.','mal'); campo.focus(); return;
-  }
-  const btn = document.getElementById('puerta-btn');
-  btn.disabled = true; btn.textContent = 'Enviando…';
-  const { error } = await sb.auth.signInWithOtp({
-    email: correo,
-    options: { emailRedirectTo: location.origin + location.pathname }
-  });
-  btn.disabled = false; btn.textContent = 'Enviarme el enlace';
-  if(error){
-    puertaMsg('No se pudo enviar: ' + esc(error.message), 'mal');
+let MODO = 'entrar';
+
+const MAIL_OK = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const $p = id => document.getElementById(id);
+
+function puertaModo(m){
+  MODO = m;
+  const crear = m === 'crear';
+  $p('puerta-titulo').textContent = crear ? 'Creá tu cuenta' : 'Entrá a tu cuenta';
+  $p('puerta-lede').textContent = crear
+    ? 'Elegí una contraseña de 6 caracteres o más. No hay que confirmar nada por correo: entrás en el momento.'
+    : 'Tu avance queda guardado en tu cuenta, así que lo retomás desde el celular o la computadora, donde sea.';
+  $p('puerta-nombre').hidden = !crear;
+  $p('puerta-clave').setAttribute('autocomplete', crear ? 'new-password' : 'current-password');
+  $p('puerta-btn').textContent = crear ? 'Crear mi cuenta' : 'Entrar';
+  $p('puerta-pregunta').innerHTML = crear
+    ? '¿Ya tenés cuenta? <button id="puerta-modo" type="button">Entrá</button>'
+    : '¿Primera vez? <button id="puerta-modo" type="button">Creá tu cuenta</button>';
+  $p('puerta-olvido').hidden = crear;
+  puertaMsg('');
+  (crear ? $p('puerta-nombre') : $p('puerta-mail')).focus();
+}
+
+function puertaError(e){
+  const m = (e.message || '').toLowerCase();
+  if(m.indexOf('invalid login') >= 0)        return 'Correo o contraseña incorrectos.';
+  if(m.indexOf('already registered') >= 0)   return 'Ese correo ya tiene cuenta. Entrá con tu contraseña.';
+  if(m.indexOf('user already') >= 0)         return 'Ese correo ya tiene cuenta. Entrá con tu contraseña.';
+  if(m.indexOf('password should be') >= 0)   return 'La contraseña es muy corta. Usá al menos 6 caracteres.';
+  if(m.indexOf('email not confirmed') >= 0)  return 'Tu cuenta todavía no está confirmada. Avisale a quien administra el curso.';
+  if(m.indexOf('signups not allowed') >= 0)  return 'Las cuentas nuevas están cerradas por ahora.';
+  return 'No se pudo: ' + esc(e.message);
+}
+
+async function puertaEnviar(){
+  const mail   = ($p('puerta-mail').value || '').trim();
+  const clave  = $p('puerta-clave').value || '';
+  const nombre = ($p('puerta-nombre').value || '').trim();
+
+  if(!MAIL_OK.test(mail)){ puertaMsg('Escribí un correo válido.','mal'); $p('puerta-mail').focus(); return; }
+  if(clave.length < 6){ puertaMsg('La contraseña tiene que tener 6 caracteres o más.','mal'); $p('puerta-clave').focus(); return; }
+  if(MODO === 'crear' && !nombre){ puertaMsg('Poné tu nombre, así aparecés en el seguimiento del curso.','mal'); $p('puerta-nombre').focus(); return; }
+
+  const btn = $p('puerta-btn'), rotulo = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Un segundo…';
+  puertaMsg('');
+
+  let error = null;
+  if(MODO === 'crear'){
+    const r = await sb.auth.signUp({ email: mail, password: clave, options: { data: { nombre: nombre.slice(0,60) } } });
+    error = r.error;
+    if(!error && r.data && !r.data.session){
+      btn.disabled = false; btn.textContent = rotulo;
+      puertaMsg('Tu cuenta quedó creada. Confirmala desde el correo que te llegó y después entrá.','bien');
+      return;
+    }
   } else {
-    puertaMsg('Listo. Te mandamos un enlace a <b>'+esc(correo)+'</b>.<br>Abrilo desde este mismo dispositivo. Si no aparece, mirá en correo no deseado.','bien');
+    const r = await sb.auth.signInWithPassword({ email: mail, password: clave });
+    error = r.error;
   }
+
+  btn.disabled = false; btn.textContent = rotulo;
+  if(error) puertaMsg(puertaError(error),'mal');
+}
+
+async function pedirReset(){
+  const mail = ($p('puerta-mail').value || '').trim();
+  if(!MAIL_OK.test(mail)){ puertaMsg('Primero escribí tu correo acá arriba y después tocá este enlace.','mal'); $p('puerta-mail').focus(); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(mail, { redirectTo: location.origin + location.pathname });
+  if(error) puertaMsg(puertaError(error),'mal');
+  else puertaMsg('Te mandamos un correo a <b>'+esc(mail)+'</b> para que elijas una contraseña nueva. Si no aparece, mirá en correo no deseado.','bien');
+}
+
+async function nuevaClave(){
+  const c = prompt('Escribí tu contraseña nueva (6 caracteres o más).');
+  if(c === null) return;
+  if(c.length < 6){ alert('Es muy corta: tiene que tener al menos 6 caracteres.'); return nuevaClave(); }
+  const { error } = await sb.auth.updateUser({ password: c });
+  alert(error ? ('No se pudo cambiar: ' + error.message) : 'Listo, tu contraseña nueva quedó guardada.');
 }
 
 async function salir(){
@@ -1787,19 +1856,22 @@ async function pedirNombre(){
   loadLocal();
   const { data:{ session } } = await sb.auth.getSession();
   if(session) await entrar(session);
-  else { puerta(true); construirTabs(); }
+  else { puerta(true); construirTabs(); puertaModo('entrar'); }
 
   sb.auth.onAuthStateChange((ev, ses)=>{
     if(ses && !YO) entrar(ses);
+    if(ev === 'PASSWORD_RECOVERY') nuevaClave();
   });
 
   document.addEventListener('click', e=>{
-    if(e.target.closest('#puerta-btn')) pedirEnlace();
+    if(e.target.closest('#puerta-btn')) puertaEnviar();
+    if(e.target.closest('#puerta-modo')) puertaModo(MODO === 'crear' ? 'entrar' : 'crear');
+    if(e.target.closest('#puerta-reset')) pedirReset();
     if(e.target.closest('#salir')) salir();
     if(e.target.closest('#cambiar-nombre')) pedirNombre();
   });
   document.addEventListener('keydown', e=>{
-    if(e.key==='Enter' && e.target.id==='puerta-mail') pedirEnlace();
+    if(e.key==='Enter' && /^puerta-(mail|clave|nombre)$/.test(e.target.id)) puertaEnviar();
   });
 })();
 
